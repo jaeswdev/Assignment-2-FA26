@@ -1,0 +1,4 @@
+shell/ncountnames/nlaunchtest/n*.o
+*.dSYM/
+[0-9]*.out
+[0-9]*.err
