@@ -1,28 +1,3 @@
-/* countnames.c -- count how many times each name appears in a text file.
- *
- * CS-149 Assignment 1
- * Chelsea Pham and Henry
- *
- * Usage:  ./countnames names.txt      (argc == 2, read from the file)
- *         cat a.txt b.txt | ./countnames   (argc == 1, read from stdin)
- *
- * Counts go to stdout as "name: count".  Empty-line warnings and errors go
- * to stderr, so `2> /dev/null` leaves just the counts and `> /dev/null`
- * leaves just the diagnostics.  Exit status is 0 in all non-error cases and
- * 1 when the input file cannot be opened.
- *
- * Two decisions the instructions leave open:
- *   - Matching is CASE SENSITIVE, so "Dave" and "dave" are two distinct
- *     names.  See test/case.txt.
- *   - A line of whitespace is a name, not an empty line, exactly as the
- *     instructions state.  Only a zero-length line is empty.  See
- *     test/spaces.txt and test/names_long.txt.
- *
- * Structure: the name table (count_add / count_print) comes first, then the
- * input side (process_stream / main).  The two prototypes below let either
- * half call the other regardless of order.
- */
-
 #include <stdio.h>
 #include <string.h>
 
