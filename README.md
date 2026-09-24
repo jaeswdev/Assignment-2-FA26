@@ -1,4 +1,4 @@
-# Assignmnet 2 FA26
+# Assignment 2 FA26
 
 **Work with Hyunjae Lee & Chelsea Pham**
 
