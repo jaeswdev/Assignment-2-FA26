@@ -1,16 +1,65 @@
 #include <stdio.h>
 #include <string.h>
+#include <fcntl.h>              
+#include <unistd.h>   
 
 /* ------------------------------------------------------------------ */
 /* Interface between the two halves                                    */
 /* ------------------------------------------------------------------ */
 
+/* Point stdout at PID.out and stderr at PID.err. Returns 0 or -1. */
+int  redirect_to_pid_files(void);
 /* Record one occurrence of `name`.
    Returns 0 on success, -1 if the table is full. */
 int  count_add(const char *name);
 
 /* Print every distinct name and its count to stdout as "name: count". */
 void count_print(void);
+
+
+/* ------------------------------------------------------------------ */
+/* Output redirect (A2)                                                */
+/* ------------------------------------------------------------------ */
+
+/* Open "PID.<ext>" and make target_fd (1 or 2) refer to it.
+   O_TRUNC, not O_APPEND: PIDs get recycled, and an old run's leftover file
+   must not have its contents mixed into this run's output.  O_CREAT
+   requires the third (permissions) argument.  If this fails, the message
+   goes to the ORIGINAL stderr, since that one has not been redirected yet. */
+static int redirect_one(const char *ext, int target_fd)
+{
+    char name[32];
+    int fd;
+
+    snprintf(name, sizeof name, "%d.%s", (int) getpid(), ext);
+    fd = open(name, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+    if (fd < 0) {
+        perror(name);
+        return -1;
+    }
+    if (dup2(fd, target_fd) < 0) {
+        perror("dup2");
+        close(fd);
+        return -1;
+    }
+    close(fd);          /* target_fd now refers to the file; spare fd not needed */
+    return 0;
+}
+
+/* Called once at the top of main().  Rather than editing every printf and
+   fprintf(stderr, ...) in A1's tested code, fd 1 and fd 2 are pointed at
+   the files once and nothing else changes.  The PID survives the shell's
+   execvp(), so these file names match the PIDs the shell reports. */
+int redirect_to_pid_files(void)
+{
+    fflush(stdout);     /* nothing is buffered yet, but be safe */
+    fflush(stderr);
+    if (redirect_one("out", STDOUT_FILENO) < 0)
+        return -1;
+    if (redirect_one("err", STDERR_FILENO) < 0)
+        return -1;
+    return 0;
+}
 
 /* ------------------------------------------------------------------ */
 /* Sizes.  All three derive from the one fact the instructions give us: */
@@ -46,6 +95,9 @@ struct entry {
    '\0', so a partially written entry can never look like a valid string. */
 static struct entry table[MAX_NAMES];
 static int n_entries = 0;
+
+/* Name of the input being read, for the empty-line warning.  Set in main(). */
+static const char *in_name = "stdin";
 
 int count_add(const char *name)
 {
@@ -109,7 +161,7 @@ void process_stream(FILE *in)
 
         // A line of spaces is a name. Only a zero-length line is empty.
         if (len == 0) {
-            fprintf(stderr, "Warning - Line %d is empty.\n", lineno);
+            fprintf(stderr, "Warning - file %s line %d is empty.\n", in_name, lineno);
             continue;
         }
 
@@ -125,13 +177,19 @@ int main(int argc, char *argv[])
     // Declare the variable
     FILE *in;
 
+    // A2: send stdout to PID.out and stderr to PID.err before anything
+    // is printed.  From here down, output code is unchanged from A1.
+    if (redirect_to_pid_files() != 0)
+        return 1;
+
     // Choose the input, handle failure
     if(argc == 1) {
         in = stdin;
     } else {
+        in_name = argv[1];
         in = fopen(argv[1], "r");
         if(in == NULL) {
-            fprintf(stderr, "error: cannot open file\n");
+            fprintf(stderr, "error: cannot open file %s\n", argv[1]);
             return 1;
         }
     }
