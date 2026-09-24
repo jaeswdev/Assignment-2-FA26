@@ -36,11 +36,50 @@ int main(void)
 }
 
 /* ---- stubs: replaced at integration by the real bodies ---- */
-int parse_line(char *line, char *args[], int max)
-{ (void)line; (void)args; (void)max; return 0; }
+int parse_line(char *line, char *args[], int max) {
+    // Declare variables
+    int n = 0;
+    char *tok;
 
-pid_t spawn_one(const char *prog, char *file)
-{ (void)prog; (void)file; return -1; }
+    // the string itself
+    tok = strtok(line, " \t\n");
+
+    while(tok != NULL && n < max - 1) {
+        args[n] = tok;      // Store the pointer
+        n++;
+        tok = strtok(NULL, " \t\n");        // NULL = confinue same string
+    }
+
+    args[n] = NULL;     // execvp needs this terminator
+    return n;
+}
+
+pid_t spawn_one(const char *prog, char *file) {
+    
+    pid_t pid = fork();     // Two processes after this
+
+    // No child created
+    if (pid < 0) {
+        perror("fork");
+        return -1;
+    }
+
+    // Child only
+    if (pid == 0) {
+        char *argv[3];
+
+        argv[0] = (char *)prog;
+        argv[1] = file;
+        argv[2] = NULL;
+
+        execvp(prog, argv);     // Success, never come back
+
+        perror("execvp");       // If the code reaches here, it means that FAILED
+        _exit(1);
+    }
+
+    return pid;     // Parent only; no wait()
+}
 
 void reap_all(void) { 
 
