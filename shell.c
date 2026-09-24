@@ -42,4 +42,18 @@ int parse_line(char *line, char *args[], int max)
 pid_t spawn_one(const char *prog, char *file)
 { (void)prog; (void)file; return -1; }
 
-void reap_all(void) { }
+void reap_all(void) { 
+
+    pid_t pid;
+    int status;
+
+    while ((pid = wait(&status)) > 0) {
+        if (WIFEXITED(status)) {
+            fprintf(stderr, "Child %d terminated normally with exit code: %d\n",
+                    (int) pid, WEXITSTATUS(status));
+        } else if (WIFSIGNALED(status)) {
+            fprintf(stderr, "Child %d terminated abnormally with signal number: %d\n",
+                    (int) pid, WTERMSIG(status));
+        }
+    }
+}
